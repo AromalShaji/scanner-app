@@ -2,173 +2,870 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Scanner App</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebScan</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+        }
+
+        :root {
+            --bg: #f4f5f7;
+            --surface: #ffffff;
+            --surface2: #f0f1f4;
+            --border: #d8dae0;
+            --text: #1a1d23;
+            --text2: #5a5f6e;
+            --accent: #2563eb;
+            --accent-h: #1d4ed8;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --radius: 8px;
+            --shadow: 0 1px 4px rgba(0, 0, 0, .08), 0 4px 16px rgba(0, 0, 0, .05);
+            --thumb-size: 148px;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 14px;
+            background: var(--bg);
+            color: var(--text);
             height: 100vh;
-            background-color: #f4f4f4;
-        }
-
-        .container {
-            display: flex;
-            width: 90%;
-            height: 90vh;
-            max-width: 1400px;
-            max-height: 800px;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            background-color: #fff;
-        }
-
-        .sidebar {
-            width: 35%;
-            padding: 20px;
-            background-color: #2c3e50;
-            color: #ecf0f1;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* header */
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 10px 16px;
+            display: flex;
             align-items: center;
-            box-sizing: border-box;
-            position: relative;
+            gap: 10px;
+            flex-shrink: 0;
         }
 
-        .sidebar h2 {
-            margin-top: 0;
-            margin-bottom: 20px;
+        header h1 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-right: auto;
         }
 
-        .sidebar label,
-        .sidebar select {
-            width: 100%;
-            margin-bottom: 20px;
-            /* Space between label/select and other content */
+        #platform-badge {
+            font-size: 11px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            padding: 2px 8px;
+            border-radius: 12px;
+            color: var(--text2);
         }
 
-        .sidebar label {
-            font-size: 18px;
-            margin-bottom: 5px;
-            /* Space between label text and select box */
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--danger);
+            transition: background .3s;
         }
 
-        .sidebar select {
-            padding: 10px;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            background-color: #ecf0f1;
-            color: #2c3e50;
+        .dot.connected {
+            background: var(--success);
         }
 
-        .sidebar button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            background-color: #e74c3c;
-            color: white;
-            font-size: 16px;
+        #conn-label {
+            font-size: 12px;
+            color: var(--text2);
+        }
+
+        /* toolbar */
+        .toolbar {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+
+        select {
+            height: 32px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 0 10px;
+            font-size: 13px;
+            background: var(--surface);
+            color: var(--text);
             cursor: pointer;
-            transition: background-color 0.3s ease;
+        }
+
+        #scanner-select {
+            min-width: 200px;
+        }
+
+        .sep {
+            width: 1px;
+            height: 24px;
+            background: var(--border);
+            margin: 0 2px;
+        }
+
+        label.opt {
+            font-size: 12px;
+            color: var(--text2);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        label.opt select {
+            min-width: 90px;
+        }
+
+        /* toggle switch */
+        .toggle-wrap {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text2);
+            cursor: pointer;
+        }
+
+        .toggle {
+            position: relative;
+            width: 30px;
+            height: 17px;
+        }
+
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
             position: absolute;
-            bottom: 20px;
-            /* Distance from the bottom of the sidebar */
-            left: 50%;
-            transform: translateX(-50%);
+            inset: 0;
+            background: var(--border);
+            border-radius: 17px;
+            transition: background .2s;
         }
 
-        .sidebar button:hover {
-            background-color: #c0392b;
+        .slider::before {
+            content: "";
+            position: absolute;
+            width: 13px;
+            height: 13px;
+            left: 2px;
+            top: 2px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform .2s;
         }
 
-        .main-content {
-            width: 65%;
-            padding: 20px;
+        input:checked+.slider {
+            background: var(--accent);
+        }
+
+        input:checked+.slider::before {
+            transform: translateX(13px);
+        }
+
+        /* buttons */
+        button {
+            height: 32px;
+            padding: 0 14px;
+            border-radius: var(--radius);
+            border: none;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background .15s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        button svg {
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--accent-h);
+        }
+
+        .btn-secondary {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--border);
+        }
+
+        .btn-danger {
+            background: #fee2e2;
+            color: var(--danger);
+            border: 1px solid #fca5a5;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #fecaca;
+        }
+
+        button:disabled {
+            opacity: .4;
+            cursor: not-allowed;
+        }
+
+        /* main */
+        main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* thumb panel */
+        #thumb-panel {
+            width: 176px;
+            background: var(--surface2);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        #thumb-panel h2 {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            color: var(--text2);
+            padding: 10px 12px 6px;
+        }
+
+        #thumbs {
+            flex: 1;
+            overflow-y: auto;
+            padding: 6px 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .thumb-item {
+            position: relative;
+            cursor: pointer;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 2px solid transparent;
+            transition: border-color .15s;
+        }
+
+        .thumb-item.active {
+            border-color: var(--accent);
+        }
+
+        .thumb-item img {
+            width: 100%;
+            height: var(--thumb-size);
+            object-fit: contain;
+            background: #fff;
+            display: block;
+        }
+
+        .thumb-num {
+            position: absolute;
+            bottom: 4px;
+            left: 4px;
+            background: rgba(0, 0, 0, .55);
+            color: #fff;
+            font-size: 10px;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        .thumb-del {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 18px;
+            height: 18px;
+            background: rgba(220, 38, 38, .85);
+            border-radius: 50%;
+            border: none;
+            color: #fff;
+            font-size: 11px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            opacity: 0;
+            transition: opacity .15s;
+        }
+
+        .thumb-item:hover .thumb-del {
+            opacity: 1;
+        }
+
+        /* skeleton thumb for in-progress page */
+        .thumb-skeleton {
+            width: 100%;
+            height: var(--thumb-size);
+            background: linear-gradient(90deg, #e8e8e8 25%, #f5f5f5 50%, #e8e8e8 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.2s infinite;
+            border-radius: 4px;
+        }
+
+        @keyframes shimmer {
+            to {
+                background-position: -200% 0;
+            }
+        }
+
+        /* preview */
+        #preview-area {
+            flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
-            position: relative;
-            box-sizing: border-box;
-        }
-
-        .image-container {
-            width: 100%;
-            height: 100%;
-            display: flex;
             justify-content: center;
-            align-items: center;
-            overflow: hidden;
-            box-sizing: border-box;
+            overflow: auto;
+            padding: 24px;
+            gap: 16px;
         }
 
-        .image-container img {
+        #preview-img {
             max-width: 100%;
-            max-height: 100%;
-            border: 5px solid #2c3e50;
-            border-radius: 8px;
-            transition: transform 0.3s ease;
+            max-height: calc(100vh - 200px);
+            border-radius: 4px;
+            box-shadow: var(--shadow);
+            display: none;
         }
 
-        .image-container img:hover {
-            transform: scale(1.05);
+        #empty-state {
+            text-align: center;
+            color: var(--text2);
+        }
+
+        #empty-state svg {
+            width: 64px;
+            height: 64px;
+            opacity: .2;
+            margin-bottom: 12px;
+        }
+
+        #empty-state p {
+            font-size: 15px;
+        }
+
+        #empty-state small {
+            font-size: 12px;
+        }
+
+        /* footer */
+        footer {
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            padding: 5px 16px;
+            font-size: 12px;
+            color: var(--text2);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-shrink: 0;
+        }
+
+        #status {
+            flex: 1;
+        }
+
+        #page-count {
+            white-space: nowrap;
+        }
+
+        /* spinner overlay */
+        #spinner {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .32);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 99;
+        }
+
+        .spin-box {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 28px 40px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            min-width: 220px;
+        }
+
+        .spin-icon {
+            width: 36px;
+            height: 36px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .spin-box p {
+            margin-top: 10px;
+            font-size: 13px;
+            color: var(--text2);
+        }
+
+        .spin-box .scan-progress {
+            margin-top: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        /* toast */
+        #toast {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%) translateY(12px);
+            background: #1a1d23;
+            color: #fff;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 13px;
+            opacity: 0;
+            transition: opacity .25s, transform .25s;
+            pointer-events: none;
+            z-index: 200;
+        }
+
+        #toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
         }
     </style>
 </head>
 
 <body>
-    <div class="container">
-        <div class="sidebar">
-            <h2>Scanner Options</h2>
-            <label for="scanner-select">Select Scanner:</label>
-            <select id="scanner-select"></select>
-            <button onclick="startScanning()">Start Scanning</button>
+
+    <header>
+        <h1>WebScan</h1>
+        <span id="platform-badge">–</span>
+        <div class="dot" id="dot"></div>
+        <span id="conn-label">Connecting…</span>
+    </header>
+
+    <div class="toolbar">
+        <button class="btn-secondary" id="btn-refresh" title="Refresh scanner list">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M13.5 8A5.5 5.5 0 1 1 8 2.5M13.5 2.5v3.5H10" />
+            </svg>
+            Refresh
+        </button>
+
+        <select id="scanner-select">
+            <option value="">— select scanner —</option>
+        </select>
+
+        <div class="sep"></div>
+
+        <label class="opt">DPI
+            <select id="dpi-select">
+                <option value="150">150</option>
+                <option value="200">200</option>
+                <option value="300" selected>300</option>
+                <option value="600">600</option>
+            </select>
+        </label>
+
+        <label class="opt">Color
+            <select id="color-select">
+                <option value="2" selected>Color</option>
+                <option value="1">Grayscale</option>
+                <option value="0">B &amp; W</option>
+            </select>
+        </label>
+
+        <div class="sep"></div>
+
+        <label class="toggle-wrap" title="Use Automatic Document Feeder">
+            <span class="toggle">
+                <input type="checkbox" id="adf-toggle">
+                <span class="slider"></span>
+            </span>
+            ADF
+        </label>
+
+        <label class="toggle-wrap" id="duplex-wrap" title="Scan both sides" style="opacity:.4;pointer-events:none">
+            <span class="toggle">
+                <input type="checkbox" id="duplex-toggle">
+                <span class="slider"></span>
+            </span>
+            Duplex
+        </label>
+
+        <div class="sep"></div>
+
+        <button class="btn-primary" id="btn-scan" disabled>
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="1" y="4" width="14" height="8" rx="2" />
+                <path d="M4 8h8M1 6h14" />
+            </svg>
+            Scan
+        </button>
+
+        <button class="btn-secondary" id="btn-pdf" disabled>
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M9 1H3a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6L9 1z" />
+                <path d="M9 1v5h5" />
+            </svg>
+            Export PDF
+        </button>
+
+        <button class="btn-danger" id="btn-clear" style="margin-left:auto" disabled>
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M2 4h12M6 4V2h4v2M13 4l-1 10H4L3 4" />
+            </svg>
+            Clear all
+        </button>
+    </div>
+
+    <main>
+        <div id="thumb-panel">
+            <h2>Pages</h2>
+            <div id="thumbs"></div>
         </div>
-        <div class="main-content">
-            <div id="scan-result"></div>
-            <div class="image-container">
-                <img id="scanned-image" src="" alt="Scanned Image" style="display: none;" />
+        <div id="preview-area">
+            <div id="empty-state">
+                <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <rect x="8" y="16" width="48" height="32" rx="4" />
+                    <path d="M16 24h8M16 30h16M16 36h10M4 24h4M56 24h4" />
+                </svg>
+                <p>No pages scanned yet</p>
+                <small>Select a scanner and click Scan</small>
             </div>
+            <img id="preview-img" alt="Scanned page preview" />
+        </div>
+    </main>
+
+    <footer>
+        <span id="status">Connecting to scan server…</span>
+        <span id="page-count">0 pages</span>
+    </footer>
+
+    <div id="spinner">
+        <div class="spin-box">
+            <svg class="spin-icon" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2">
+                <path
+                    d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+            </svg>
+            <p id="spinner-msg">Scanning…</p>
+            <div class="scan-progress" id="scan-progress"></div>
         </div>
     </div>
 
+    <div id="toast"></div>
+
     <script>
-        function startScanning() {
-            const select = document.getElementById('scanner-select');
-            const scannerName = select.value;
-            if (scannerName) {
-                window.electronAPI.startScan(scannerName);
-            } else {
-                alert('Please select a scanner');
+        const WS_URL = 'ws://127.0.0.1:8765';
+
+        // ── state ──────────────────────────────────────────────────────────────────
+        let ws = null;
+        let connected = false;
+        let pages = [];       // {dataUrl, width, height}
+        let activeIdx = -1;
+
+        // ── DOM ────────────────────────────────────────────────────────────────────
+        const $ = id => document.getElementById(id);
+        const dot = $('dot');
+        const connLabel = $('conn-label');
+        const platformBadge = $('platform-badge');
+        const scannerSel = $('scanner-select');
+        const dpiSel = $('dpi-select');
+        const colorSel = $('color-select');
+        const adfToggle = $('adf-toggle');
+        const duplexToggle = $('duplex-toggle');
+        const duplexWrap = $('duplex-wrap');
+        const btnRefresh = $('btn-refresh');
+        const btnScan = $('btn-scan');
+        const btnPdf = $('btn-pdf');
+        const btnClear = $('btn-clear');
+        const thumbsEl = $('thumbs');
+        const previewImg = $('preview-img');
+        const emptyState = $('empty-state');
+        const statusEl = $('status');
+        const pageCountEl = $('page-count');
+        const spinner = $('spinner');
+        const spinnerMsg = $('spinner-msg');
+        const scanProgress = $('scan-progress');
+        const toastEl = $('toast');
+
+        // ── ADF toggle enables duplex ──────────────────────────────────────────────
+        adfToggle.onchange = () => {
+            const on = adfToggle.checked;
+            duplexWrap.style.opacity = on ? '1' : '.4';
+            duplexWrap.style.pointerEvents = on ? 'auto' : 'none';
+            if (!on) duplexToggle.checked = false;
+        };
+
+        // ── WebSocket ──────────────────────────────────────────────────────────────
+        function connect() {
+            setStatus('Connecting to scan server…');
+            ws = new WebSocket(WS_URL);
+
+            ws.onopen = () => {
+                connected = true;
+                dot.classList.add('connected');
+                connLabel.textContent = 'Connected';
+                send({ cmd: 'list_scanners' });
+            };
+
+            ws.onclose = () => {
+                connected = false;
+                dot.classList.remove('connected');
+                connLabel.textContent = 'Disconnected';
+                setStatus('Disconnected — retrying in 3 s…');
+                updateButtons();
+                setTimeout(connect, 3000);
+            };
+
+            ws.onerror = () => setStatus('Cannot reach scan_server.py — is it running?');
+
+            ws.onmessage = ({ data }) => handleMessage(JSON.parse(data));
+        }
+
+        function send(obj) {
+            if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
+        }
+
+        // ── message handler ────────────────────────────────────────────────────────
+        function handleMessage(msg) {
+            switch (msg.event) {
+
+                case 'scanners':
+                    populateScanners(msg.scanners || []);
+                    if (msg.platform) {
+                        platformBadge.textContent = msg.platform;
+                    }
+                    break;
+
+                case 'scan_status':
+                    showSpinner(`Scanning (${msg.mode || 'Flatbed'})…`);
+                    scanProgress.textContent = '';
+                    break;
+
+                case 'scan_page':
+                    // streamed page — add immediately so user sees progress
+                    scanProgress.textContent = `Page ${msg.total_so_far} received`;
+                    addPage({ dataUrl: msg.data_url, width: msg.width, height: msg.height });
+                    break;
+
+                case 'scan_complete':
+                    hideSpinner();
+                    setStatus(`Scan complete — ${msg.page_count} page(s)`);
+                    updateButtons();
+                    break;
+
+                case 'scan_result':
+                    // error path
+                    if (!msg.success) {
+                        hideSpinner();
+                        toast('Scan failed: ' + msg.error, true);
+                        setStatus('Scan error: ' + msg.error);
+                        updateButtons();
+                    }
+                    break;
+
+                case 'pdf_result':
+                    hideSpinner();
+                    if (msg.success) {
+                        downloadBase64(msg.pdf_b64, 'scanned_document.pdf', 'application/pdf');
+                        toast(`PDF exported — ${msg.page_count} page(s)`);
+                        setStatus(`PDF saved (${msg.page_count} pages)`);
+                    } else {
+                        toast('PDF failed: ' + msg.error, true);
+                        setStatus('PDF error: ' + msg.error);
+                    }
+                    break;
+
+                case 'pong':
+                    break;
+
+                default:
+                    if (!msg.success) {
+                        toast(msg.error || 'Unknown error', true);
+                        hideSpinner();
+                    }
             }
         }
 
-        window.electronAPI.onScannersList((scanners) => {
-            const select = document.getElementById('scanner-select');
-            select.innerHTML = '';
-            scanners.forEach(scanner => {
-                const option = document.createElement('option');
-                option.textContent = scanner;
-                option.value = scanner;
-                select.appendChild(option);
+        // ── scanners ───────────────────────────────────────────────────────────────
+        function populateScanners(list) {
+            scannerSel.innerHTML = '<option value="">— select scanner —</option>';
+            list.forEach(name => {
+                const o = document.createElement('option');
+                o.value = o.textContent = name;
+                scannerSel.appendChild(o);
             });
-        });
+            if (list.length === 1) scannerSel.value = list[0];
+            updateButtons();
+            setStatus(list.length ? `Found ${list.length} scanner(s)` : 'No scanners found');
+        }
 
-        window.electronAPI.onScanResult((result) => {
-            const img = document.getElementById('scanned-image');
-            if (result.startsWith("data:image/png;base64,")) {
-                img.src = result;
-                img.style.display = 'block';
-            } else {
-                document.getElementById('scan-result').textContent = result;
+        // ── pages ──────────────────────────────────────────────────────────────────
+        function addPage(page) {
+            pages.push(page);
+            renderThumbs();
+            setActive(pages.length - 1);
+            updateButtons();
+        }
+
+        function removePage(idx) {
+            pages.splice(idx, 1);
+            renderThumbs();
+            if (!pages.length) { activeIdx = -1; showEmpty(); }
+            else setActive(Math.min(idx, pages.length - 1));
+            updateButtons();
+        }
+
+        function renderThumbs() {
+            thumbsEl.innerHTML = '';
+            pages.forEach((p, i) => {
+                const item = document.createElement('div');
+                item.className = 'thumb-item' + (i === activeIdx ? ' active' : '');
+                item.onclick = () => setActive(i);
+
+                const img = document.createElement('img');
+                img.src = p.dataUrl;
+                img.alt = `Page ${i + 1}`;
+
+                const num = document.createElement('span');
+                num.className = 'thumb-num';
+                num.textContent = i + 1;
+
+                const del = document.createElement('button');
+                del.className = 'thumb-del';
+                del.title = 'Remove page';
+                del.innerHTML = '&#x2715;';
+                del.onclick = e => { e.stopPropagation(); removePage(i); };
+
+                item.append(img, num, del);
+                thumbsEl.appendChild(item);
+            });
+            pageCountEl.textContent = `${pages.length} page${pages.length !== 1 ? 's' : ''}`;
+        }
+
+        function setActive(idx) {
+            activeIdx = idx;
+            renderThumbs();
+            const p = pages[idx];
+            if (p) {
+                previewImg.src = p.dataUrl;
+                previewImg.style.display = 'block';
+                emptyState.style.display = 'none';
             }
-        });
+        }
+
+        function showEmpty() {
+            previewImg.style.display = 'none';
+            emptyState.style.display = 'block';
+        }
+
+        // ── actions ────────────────────────────────────────────────────────────────
+        btnRefresh.onclick = () => {
+            if (!connected) { toast('Not connected', true); return; }
+            send({ cmd: 'list_scanners' });
+        };
+
+        btnScan.onclick = () => {
+            const scanner = scannerSel.value;
+            if (!scanner) { toast('Please select a scanner', true); return; }
+            btnScan.disabled = true;
+            send({
+                cmd: 'scan',
+                scanner,
+                dpi: parseInt(dpiSel.value),
+                pixel_type: parseInt(colorSel.value),
+                use_adf: adfToggle.checked,
+                duplex: duplexToggle.checked,
+            });
+        };
+
+        btnPdf.onclick = () => {
+            if (!pages.length) return;
+            showSpinner('Creating PDF…');
+            send({ cmd: 'export_pdf', pages: pages.map(p => p.dataUrl), output_path: 'scanned_document.pdf' });
+        };
+
+        btnClear.onclick = () => {
+            if (!confirm(`Clear all ${pages.length} page(s)?`)) return;
+            pages = []; activeIdx = -1;
+            renderThumbs(); showEmpty(); updateButtons();
+            setStatus('All pages cleared');
+        };
+
+        scannerSel.onchange = updateButtons;
+
+        // ── utils ──────────────────────────────────────────────────────────────────
+        function updateButtons() {
+            const hasSel = !!scannerSel.value;
+            const hasPages = pages.length > 0;
+            btnScan.disabled = !connected || !hasSel;
+            btnPdf.disabled = !hasPages;
+            btnClear.disabled = !hasPages;
+        }
+
+        function setStatus(msg) { statusEl.textContent = msg; }
+        function showSpinner(msg) { spinnerMsg.textContent = msg; spinner.style.display = 'flex'; }
+        function hideSpinner() { spinner.style.display = 'none'; }
+
+        function toast(msg, isError = false) {
+            toastEl.textContent = msg;
+            toastEl.style.background = isError ? '#dc2626' : '#1a1d23';
+            toastEl.classList.add('show');
+            setTimeout(() => toastEl.classList.remove('show'), 3200);
+        }
+
+        function downloadBase64(b64, filename, mime) {
+            const a = document.createElement('a');
+            a.href = `data:${mime};base64,${b64}`;
+            a.download = filename;
+            a.click();
+        }
+
+        // ── boot ───────────────────────────────────────────────────────────────────
+        showEmpty();
+        updateButtons();
+        connect();
     </script>
 </body>
 
