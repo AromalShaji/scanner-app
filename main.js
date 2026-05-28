@@ -1,74 +1,83 @@
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow } = require("electron");
 const path = require("path");
-const { exec } = require("child_process");
+const { spawn } = require("child_process");
+const fs = require("fs");
+
+let serverProcess = null;
+let mainWindow = null;
+
+// Determine the best Python executable to use
+function getPythonExecutable() {
+  const venvPath = path.join(__dirname, ".venv");
+  if (process.platform === "win32") {
+    const winVenvPython = path.join(venvPath, "Scripts", "python.exe");
+    if (fs.existsSync(winVenvPython)) {
+      return winVenvPython;
+    }
+    return "python";
+  } else {
+    const unixVenvPython = path.join(venvPath, "bin", "python");
+    if (fs.existsSync(unixVenvPython)) {
+      return unixVenvPython;
+    }
+    return "python3";
+  }
+}
+
+// Start the Python scan_server.py WebSocket server
+function startBackendServer() {
+  const pythonPath = getPythonExecutable();
+  const serverScript = path.join(__dirname, "scan_server.py");
+
+  console.log(`[Electron] Starting backend server using: ${pythonPath}`);
+  console.log(`[Electron] Script path: ${serverScript}`);
+
+  serverProcess = spawn(pythonPath, [serverScript, "--host", "127.0.0.1", "--port", "8765"], {
+    cwd: __dirname,
+    stdio: "pipe",
+  });
+
+  serverProcess.stdout.on("data", (data) => {
+    console.log(`[Python Server STDOUT] ${data.toString().trim()}`);
+  });
+
+  serverProcess.stderr.on("data", (data) => {
+    console.error(`[Python Server STDERR] ${data.toString().trim()}`);
+  });
+
+  serverProcess.on("close", (code) => {
+    console.log(`[Python Server] Process exited with code ${code}`);
+    serverProcess = null;
+  });
+
+  serverProcess.on("error", (err) => {
+    console.error(`[Python Server] Failed to start server process:`, err);
+  });
+}
 
 function createWindow() {
-  const win = new BrowserWindow({
-    width: 800,
-    height: 600,
+  mainWindow = new BrowserWindow({
+    width: 1024,
+    height: 768,
     webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-      nodeIntegration: true,
+      nodeIntegration: false,
+      contextIsolation: true,
     },
   });
 
-  win.loadFile("index.html");
+  mainWindow.loadFile("index.html");
 
-  // Automatically list scanners when the window is ready
-  win.webContents.on("did-finish-load", () => {
-    exec(
-      "python C:/Users/ACER/scanner-app/scan.py --list-scanners",
-      (error, stdout, stderr) => {
-        console.log(`stdout: ${stdout}`);
-        console.log(`stderr: ${stderr}`);
-        if (error) {
-          console.error(`Error: ${error.message}`);
-          win.webContents.send("scanners-list", []);
-          return;
-        }
-        if (stderr) {
-          console.error(`Stderr: ${stderr}`);
-          win.webContents.send("scanners-list", []);
-          return;
-        }
-        const scanners = stdout.trim().split("\n");
-        win.webContents.send("scanners-list", scanners);
-      }
-    );
+  mainWindow.on("closed", () => {
+    mainWindow = null;
   });
-
-  ipcMain.on("start-scan", (event, scannerName) => {
-    exec(
-      `python C:/Users/ACER/scanner-app/scan.py --scan "${scannerName}"`,
-      (error, stdout, stderr) => {
-        if (error) {
-          console.error(`Error: ${error.message}`);
-          event.reply("scan-result", "Error during scanning1.");
-          return;
-        }
-        if (stderr) {
-          console.error(`Stderr: ${stderr}`);
-          event.reply("scan-result", "Error during scanning2.");
-          return;
-        }
-
-        console.log(`stdout: ${stdout}`); // Log stdout for debugging
-
-        const base64Image = stdout.trim();
-        if (base64Image.startsWith("data:image/png;base64,")) {
-          event.reply("scan-result", base64Image);
-        } else {
-          console.error("Unexpected image data format.");
-          event.reply("scan-result", "Error during scanning3.");
-        }
-      }
-    );
-  });
-
 }
 
 app.whenReady().then(() => {
   app.setPath("userData", path.join(app.getPath("userData"), "custom-cache"));
+  
+  // Start python scan server in the background
+  startBackendServer();
+  
   createWindow();
 
   app.on("activate", () => {
@@ -79,3 +88,12 @@ app.whenReady().then(() => {
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
+
+app.on("will-quit", () => {
+  if (serverProcess) {
+    console.log("[Electron] Killing backend server process...");
+    serverProcess.kill();
+    serverProcess = null;
+  }
+});
+
